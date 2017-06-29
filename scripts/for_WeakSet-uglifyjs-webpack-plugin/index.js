@@ -79,6 +79,7 @@ var UglifyJsPlugin = function () {
           }
 
           var filteredFiles = files.filter(_ModuleFilenameHelpers2.default.matchObject.bind(undefined, options));
+          var assetOutputCache = new WeakSet();
           var file;
 
           for (i = 0, len = filteredFiles.length; i < len; i++) {
@@ -88,8 +89,7 @@ var UglifyJsPlugin = function () {
             var sourceMap = void 0;
             try {
               var asset = compilation.assets[file];
-              if (asset.__UglifyJsPlugin) {
-                compilation.assets[file] = asset.__UglifyJsPlugin;
+              if (assetOutputCache.has(asset)) {
                 continue;
               }
               var input = void 0;
@@ -258,8 +258,7 @@ var UglifyJsPlugin = function () {
                   }
                 }
               }
-              compilation.assets[file] = outputSource;
-              asset.__UglifyJsPlugin = outputSource;
+              assetOutputCache.add(compilation.assets[file] = outputSource);
 
               if (warnings.length > 0) {
                 compilation.warnings.push(new Error(`${file} from UglifyJs\n${warnings.join('\n')}`));

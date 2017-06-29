@@ -36,69 +36,61 @@ class ProfilePlugin {
   apply(compiler) {
     const outPath = process.cwd() + '/'
         + this.id
-        + '.optimize-chunk-assets.cpuprofile';
+        + '.uglifyjs-webpack-plugin.cpuprofile';
 
     compiler.plugin('compilation', (compilation) => {
-      compilation.plugin('additional-assets', (callback) => {
-        console.log('additional-assets');
-
+      compilation.plugin('optimize-chunk-assets', (chunks, callback) => {
         const files = compilation.additionalChunkAssets || [];
         for (let i = compilation.chunks.length - 1; i > -1; --i) {
           Array.prototype.push.apply(files, compilation.chunks[i].files);
         }
 
-        console.log('files length', files.reduce((_files, file) => {
+        console.log(this.id, 'files length', files.reduce((_files, file) => {
           if (!_files.includes(file)) {
             _files.push(file);
           }
           return _files;
         }, []).length);
 
-        profiler.startProfiling('optimize-chunk-assets', true);
-        console.time(this.id + ' ' + 'optimize-chunk-assets');
+
+        console.log(this.id, 'profiler.startProfiling()');
+        profiler.startProfiling(this.id, true);
+        console.time(this.id);
         callback();
       });
 
       compilation.plugin('after-optimize-chunk-assets', (chunks) => {
-        console.timeEnd(this.id + ' ' + 'optimize-chunk-assets');
-        const profile = profiler.stopProfiling('optimize-chunk-assets');
+        console.timeEnd(this.id);
+        console.log(this.id, 'profiler.stopProfiling()');
+        const profile = profiler.stopProfiling(this.id);
         profile.export((err, result) => {
-          console.log('profile.export()');
-          fs.writeFile(outPath, result, 'utf8', (_err) => {
-            console.log('fs.writeFileAsync()', outPath);
+          console.log(this.id, 'profile.export()');
+          fs.writeFileSync(outPath, result, 'utf8');
+          console.log(this.id, 'profile saved:', outPath);
             profile.delete();
-          })
         });
       });
     });
 
-    new AggressiveSplittingPlugin({
-      minSize: 20000,
-      maxSize: 40000
-    }).apply(compiler);
-    // new AggressiveSplittingPlugin().apply(compiler);
-    // new CommonsChunkPlugin({
-    //   name: 'common',
-    //   minChunks: 2
-    // }).apply(compiler);
+    new AggressiveSplittingPlugin().apply(compiler);
     new CommonsChunkPlugin({
       name: 'manifest',
       minChunks: Infinity
     }).apply(compiler);
+    this.plugin.apply(compiler);
     // new ModuleConcatenationPlugin().apply(compiler)
-    new this.plugin.apply(compiler);
   }
 }
 
 function build(id, UglifyJsPlugin) {
   return new Promise((resolve, reject) => {
-    console.log('Creating an optimized production build...');
-    const distDir = path.resolve('./dist', id);
+    id += '_node@' + process.version;
+    console.log(id, 'compile...');
     const cfg = Object.assign({}, config)
-    cfg.output.path = distDir;
+    cfg.output.path = path.resolve('./dist', id);
     const compiler = webpack(cfg);
 
-    new CleanPlugin([distDir], { verbose: false }).apply(compiler);
+    new CleanPlugin(['dist'], { verbose: false }).apply(compiler);
     new ProfilePlugin(id, UglifyJsPlugin).apply(compiler);
 
     compiler.run((err, stats) => {
@@ -116,18 +108,26 @@ function reRequire(modulePath) {
   return _module.default || _module;
 }
 
-const oldPlugin = reRequire('./forEach-uglifyjs-webpack-plugin');
-const newPlugin = reRequire('./for-uglifyjs-webpack-plugin');
+const untouched_UglifyjsPlugin = reRequire('uglifyjs-webpack-plugin');
+const forEach_WeakSet_UglifyjsPlugin = reRequire('./forEach_WeakSet-uglifyjs-webpack-plugin');
+const for_UglifyjsPlugin = reRequire('./for-uglifyjs-webpack-plugin');
+const for_WeakSet_UglifyjsPlugin = reRequire('./for_WeakSet-uglifyjs-webpack-plugin');
 
 Promise.resolve()
-  .then(build.bind(null, 'old0', oldPlugin))
-  // .then(build.bind(null, 'new1', newPlugin))
-  // .then(build.bind(null, 'new2', newPlugin))
-  .then(() => null)
+  .then(build.bind(null, 'untouched', untouched_UglifyjsPlugin))
+  // .then(build.bind(null, 'untouched', untouched_UglifyjsPlugin))
+  // .then(build.bind(null, 'untouched1', untouched_UglifyjsPlugin))
   // .then(console.log)
-  .then(build.bind(null, 'new0', newPlugin))
-  // .then(build.bind(null, 'old1', oldPlugin))
-  // .then(build.bind(null, 'old2', oldPlugin))
-  .then(() => null)
+  .then(build.bind(null, 'forEach_WeakSet', forEach_WeakSet_UglifyjsPlugin))
+  // .then(build.bind(null, 'forEach_WeakSet1', forEach_WeakSet_UglifyjsPlugin))
+  // .then(build.bind(null, 'forEach_WeakSet2', forEach_WeakSet_UglifyjsPlugin))
+  // .then(console.log)
+  .then(build.bind(null, 'for', for_UglifyjsPlugin))
+  // .then(build.bind(null, 'for1', for_UglifyjsPlugin))
+  // .then(build.bind(null, 'for2', for_UglifyjsPlugin))
+  // .then(console.log)
+  .then(build.bind(null, 'for_WeakSet', for_WeakSet_UglifyjsPlugin))
+  // .then(build.bind(null, 'for_WeakSet1', for_WeakSet_UglifyjsPlugin))
+  // .then(build.bind(null, 'for_WeakSet2', for_WeakSet_UglifyjsPlugin))
   // .then(console.log)
   .catch(console.error);

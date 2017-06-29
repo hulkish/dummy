@@ -57,8 +57,7 @@ var UglifyJsPlugin = function () {
   _createClass(UglifyJsPlugin, [{
     key: 'apply',
     value: function apply(compiler) {
-      var options = this.options || {};
-
+      var options = this.options;
       options.test = options.test || /\.js($|\?)/i;
       var warningsFilter = options.warningsFilter || function () {
         return true;
@@ -79,12 +78,16 @@ var UglifyJsPlugin = function () {
           });
           files.push.apply(files, _toConsumableArray(compilation.additionalChunkAssets));
           var filteredFiles = files.filter(_ModuleFilenameHelpers2.default.matchObject.bind(undefined, options));
+          var assetOutputCache = new WeakSet();
           filteredFiles.forEach(function (file) {
             var oldWarnFunction = _uglifyJs2.default.AST_Node.warn_function;
             var warnings = [];
             var sourceMap = void 0;
             try {
               var asset = compilation.assets[file];
+              if (assetOutputCache.has(asset)) {
+                return;
+              }
               if (asset.__UglifyJsPlugin) {
                 compilation.assets[file] = asset.__UglifyJsPlugin;
                 return;
@@ -255,8 +258,7 @@ var UglifyJsPlugin = function () {
                   }
                 }
               }
-              compilation.assets[file] = outputSource;
-              asset.__UglifyJsPlugin = outputSource;
+              assetOutputCache.add(compilation.assets[file] = outputSource);
 
               if (warnings.length > 0) {
                 compilation.warnings.push(new Error(`${file} from UglifyJs\n${warnings.join('\n')}`));
