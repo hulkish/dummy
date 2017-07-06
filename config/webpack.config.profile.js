@@ -23,18 +23,23 @@ const paths = { dotenv: '/Users/shargrove/dev/repos/dummy/.env',
 module.exports = {
   bail: true,
   cache: false,
-  devtool: false,
+  devtool: 'source-map',
   entry: paths.appIndexJs,
   output: {
     path: paths.appBuild,
   },
   resolve: {
+    unsafeCache: false,
     extensions: ['.js', '.json', '.jsx'],
     alias: {
       'react-native': 'react-native-web',
     }
   },
+  resolveLoader: {
+    unsafeCache: false
+  },
   module: {
+    unsafeCache: false,
     rules: [
       {
         test: /\.(js|jsx)$/,
